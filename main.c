@@ -8,11 +8,13 @@
 #include <unistd.h>
 
 /*** Functions ***/
-void die(const char *s);
+void die(const char *s); // Terminal
 void enableRawMode();
 void disableRawMode();
 char editorReadKey();
-void editorProcessKeypress();
+void editorDrawRows(); // Output
+void editorRefreshScreen();
+void editorProcessKeypress(); // Input
 
 /*** Defines ***/
 #define CTRL_KEY(k) ((k) & 0x1f)
@@ -24,6 +26,7 @@ struct termios orig_termios;
 int main() {
   enableRawMode();
   while (1) {
+    editorRefreshScreen();
     editorProcessKeypress();
   }
   return 0;
@@ -31,6 +34,8 @@ int main() {
 
 /*** Terminal ***/
 void die(const char *s) {
+  write(STDOUT_FILENO, "\x1b[2J", 4);
+  write(STDOUT_FILENO, "\x1b[H", 3);
   perror(s);
   exit(1);
 }
@@ -65,10 +70,28 @@ char editorReadKey() {
   return c;
 }
 
+/*** Output ***/
+void editorDrawRows() {
+  int y = 0;
+  for (y = 0; y < 24; y++) {
+    write(STDOUT_FILENO, "~\r\n", 3);
+  }
+}
+
+void editorRefreshScreen() {
+  write(STDOUT_FILENO, "\x1b[2J", 4);
+  write(STDOUT_FILENO, "\x1b[H", 3);
+  editorDrawRows();
+  write(STDOUT_FILENO, "\1xb[H", 3);
+}
+
+/*** Input ***/
 void editorProcessKeypress() {
   char c = editorReadKey();
   switch (c) {
   case CTRL_KEY('q'):
+    write(STDOUT_FILENO, "\x1b[2J", 4);
+    write(STDOUT_FILENO, "\x1b[H", 3);
     exit(0);
     break;
   }
