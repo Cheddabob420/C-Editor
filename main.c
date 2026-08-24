@@ -25,6 +25,7 @@
 #define HL_HIGHLIGHT_NUMBERS (1 << 0)
 #define HL_HIGHLIGHT_STRINGS (1 << 1)
 #define HLDB_ENTRIES (sizeof(HLDB) / sizeof(HLDB[0]))
+#define KILO_GUTTER_WIDTH 6
 enum editorKey {
   BACKSPACE = 127,
   ARROW_LEFT = 1000,
@@ -705,8 +706,9 @@ void editorScroll() {
   if (E.rx < E.coloff) {
     E.coloff = E.rx;
   }
-  if (E.rx >= E.coloff + E.screencols) {
-    E.coloff = E.rx - E.screencols + 1;
+  int usable_cols = E.screencols - KILO_GUTTER_WIDTH;
+  if (E.rx >= E.coloff + usable_cols) {
+    E.coloff = E.rx - usable_cols + 1;
   }
 }
 
@@ -730,9 +732,14 @@ void editorDrawRows(struct abuf *ab) {
           abAppend(ab, " ", 1);
         abAppend(ab, welcome, welcomelen);
       } else {
-        abAppend(ab, "~", 1);
+        abAppend(ab, "~", KILO_GUTTER_WIDTH);
       }
     } else {
+      char numbuf[16];
+      int numlen =
+          snprintf(numbuf, sizeof(numbuf), "\x1b[90m%4d \x1b[0m|", filerow + 1);
+      abAppend(ab, numbuf, numlen);
+      int usable_cols = E.screencols - KILO_GUTTER_WIDTH;
       int len = E.row[filerow].rsize - E.coloff;
       if (len < 0)
         len = 0;
@@ -821,7 +828,7 @@ void editorRefreshScreen() {
   editorDrawMessageBar(&ab);
   char buf[32];
   snprintf(buf, sizeof(buf), "\x1b[%d;%dH", (E.cy - E.rowoff) + 1,
-           (E.rx - E.coloff) + 1);
+           (E.rx - E.coloff) + 1 + KILO_GUTTER_WIDTH);
   abAppend(&ab, buf, strlen(buf));
   abAppend(&ab, "\x1b[?25h", 6);
   write(STDOUT_FILENO, ab.b, ab.len);
