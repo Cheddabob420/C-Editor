@@ -509,18 +509,32 @@ void editorInsertChar(int c) {
 }
 
 void editorInsertNewLine() {
-  if (E.cx == 0) {
-    editorInsertRow(E.cy, "", 0);
-  } else {
-    erow *row = &E.row[E.cy];
-    editorInsertRow(E.cy + 1, &row->chars[E.cx], row->size - E.cx);
-    row = &E.row[E.cy];
-    row->size = E.cx;
-    row->chars[row->size] = '\0';
-    editorUpdateRow(row);
+  if (E.cy >= E.numrows)
+    return;
+  erow *row = &E.row[E.cy];
+  int indent_len = 0;
+  while (indent_len < E.cx &&
+         (row->chars[indent_len] == ' ' || row->chars[indent_len] == '\t')) {
+    indent_len++;
   }
+  int rest_len = row->size - E.cx;
+  int new_len = indent_len + rest_len;
+  char *new_chars = malloc(new_len + 1);
+  if (indent_len > 0) {
+    memcpy(new_chars, row->chars, indent_len);
+  }
+  if (rest_len > 0) {
+    mempcpy(new_chars + indent_len, &row->chars[E.cx], rest_len);
+  }
+  new_chars[new_len] = '\0';
+  editorInsertRow(E.cy + 1, new_chars, new_len);
+  free(new_chars);
+  row = &E.row[E.cy];
+  row->size = E.cx;
+  row->chars[row->size] = '\0';
+  editorUpdateRow(row);
   E.cy++;
-  E.cx = 0;
+  E.cx = indent_len;
 }
 
 void editorDelChar() {
